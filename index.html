@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bong Bóng Ký Ức Vintage</title>
+    <style>
+        /* PHONG CÁCH VINTAGE / MÀU FILM */
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Font chữ máy đánh chữ cổ */
+            background-color: #e8dcca; /* Màu nền giấy cũ */
+            background-image: radial-gradient(#c2b29f 1px, transparent 1px);
+            background-size: 20px 20px; /* Họa tiết chấm bi mờ */
+            color: #4a3b32;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden; /* Ẩn thanh cuộn để bong bóng không trôi ra ngoài */
+            position: relative;
+        }
+
+        /* Nút thêm ghi chú */
+        #addBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #8c6b5d; /* Màu nâu vintage */
+            color: #f4ebd0;
+            border: 2px solid #5c4033;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 4px 4px 0px #5c4033;
+            transition: all 0.2s;
+        }
+        #addBtn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #5c4033;
+        }
+
+        /* Khung nhập liệu (Modal) */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #f4ebd0;
+            padding: 30px;
+            border: 2px solid #5c4033;
+            box-shadow: 8px 8px 0px #5c4033;
+            z-index: 200;
+            text-align: center;
+        }
+        #modal textarea {
+            width: 250px;
+            height: 100px;
+            background-color: #fffaf0;
+            border: 1px solid #8c6b5d;
+            font-family: inherit;
+            padding: 10px;
+            color: #4a3b32;
+            resize: none;
+        }
+        #modal button {
+            margin-top: 15px;
+            padding: 8px 15px;
+            background-color: #8c6b5d;
+            color: #f4ebd0;
+            border: 1px solid #5c4033;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+        }
+
+        /* Bong bóng ghi chú */
+        .bubble {
+            position: absolute;
+            background: rgba(222, 203, 175, 0.85); /* Màu ngà vàng bán trong suốt */
+            border: 1px solid #bba689;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            box-shadow: inset 0 0 20px rgba(139, 105, 82, 0.2), 3px 3px 10px rgba(0,0,0,0.1);
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            /* Giới hạn kích thước bong bóng */
+            width: 120px;
+            height: 120px;
+            word-wrap: break-word;
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+        }
+        
+        /* Nút xóa ẩn khi trỏ chuột vào bong bóng */
+        .delete-btn {
+            display: none;
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            color: #8b0000;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .bubble:hover .delete-btn {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="addBtn" onclick="openModal()">+</button>
+
+    <div id="modal">
+        <h3 style="margin-top:0;">Thêm Ký Ức Mới</h3>
+        <textarea id="noteInput" placeholder="Viết gì đó vào đây..."></textarea><br>
+        <button onclick="saveNote()">Lưu vào bong bóng</button>
+        <button onclick="closeModal()" style="background-color: #ccc; color: #333;">Hủy</button>
+    </div>
+
+    <div id="bubbleContainer"></div>
+
+    <script>
+        // Lấy dữ liệu từ Local Storage khi vừa mở web
+        let notes = JSON.parse(localStorage.getItem('vintageBubbles')) || [];
+        let bubblesArray = []; // Mảng chứa các bong bóng đang bay
+
+        // Mở / Đóng khung nhập
+        function openModal() {
+            document.getElementById('modal').style.display = 'block';
+            document.getElementById('noteInput').value = '';
+            document.getElementById('noteInput').focus();
+        }
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // Lưu ghi chú
+        function saveNote() {
+            const text = document.getElementById('noteInput').value.trim();
+            if (text !== "") {
+                notes.push(text);
+                // Lưu vào bộ nhớ trình duyệt
+                localStorage.setItem('vintageBubbles', JSON.stringify(notes));
+                createBubbleDOM(text, notes.length - 1);
+                closeModal();
+            }
+        }
+
+        // Xóa ghi chú
+        function deleteNote(index, element) {
+            notes.splice(index, 1);
+            localStorage.setItem('vintageBubbles', JSON.stringify(notes));
+            element.remove();
+            // Xóa khỏi mảng chuyển động
+            bubblesArray = bubblesArray.filter(b => b.element !== element);
+            // Render lại toàn bộ để cập nhật đúng Index
+            renderAllBubbles();
+        }
+
+        // Tạo phần tử HTML cho bong bóng
+        function createBubbleDOM(text, index) {
+            const container = document.getElementById('bubbleContainer');
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            // Chèn chữ và nút xóa
+            bubble.innerHTML = `
+                <span class="delete-btn" onclick="deleteNote(${index}, this.parentElement)">×</span>
+                <span>${text}</span>
+            `;
+
+            // Đặt vị trí xuất hiện ngẫu nhiên
+            let x = Math.random() * (window.innerWidth - 150);
+            let y = Math.random() * (window.innerHeight - 150);
+            bubble.style.left = x + 'px';
+            bubble.style.top = y + 'px';
+
+            container.appendChild(bubble);
+
+            // Gán vận tốc di chuyển ngẫu nhiên (chậm rãi, lơ lửng)
+            let vx = (Math.random() - 0.5) * 1.5;
+            let vy = (Math.random() - 0.5) * 1.5;
+
+            bubblesArray.push({ element: bubble, x, y, vx, vy, width: 160, height: 160 });
+        }
+
+        // Hiển thị tất cả bong bóng đã lưu
+        function renderAllBubbles() {
+            document.getElementById('bubbleContainer').innerHTML = '';
+            bubblesArray = [];
+            notes.forEach((text, index) => {
+                createBubbleDOM(text, index);
+            });
+        }
+
+        // Hàm xử lý chuyển động (bay lơ lửng và đập vào tường nảy lại)
+        function animateBubbles() {
+            bubblesArray.forEach(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+
+                // Nếu chạm viền màn hình thì đảo chiều vận tốc
+                if (b.x <= 0 || b.x + b.width >= window.innerWidth) b.vx *= -1;
+                if (b.y <= 0 || b.y + b.height >= window.innerHeight) b.vy *= -1;
+
+                b.element.style.left = b.x + 'px';
+                b.element.style.top = b.y + 'px';
+            });
+            requestAnimationFrame(animateBubbles); // Vòng lặp liên tục tạo animation mượt mà
+        }
+
+        // Khởi chạy khi tải trang
+        renderAllBubbles();
+        animateBubbles();
+    </script>
+</body>
+</html>
