@@ -5,45 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bong Bóng Ký Ức Vintage</title>
     <style>
-        /* PHONG CÁCH VINTAGE / MÀU FILM */
+        /* PHONG CÁCH VINTAGE */
         body {
-            font-family: 'Courier New', Courier, monospace; /* Font chữ máy đánh chữ cổ */
-            background-color: #e8dcca; /* Màu nền giấy cũ */
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #e8dcca;
             background-image: radial-gradient(#c2b29f 1px, transparent 1px);
-            background-size: 20px 20px; /* Họa tiết chấm bi mờ */
+            background-size: 20px 20px;
             color: #4a3b32;
             margin: 0;
             height: 100vh;
-            overflow: hidden; /* Ẩn thanh cuộn để bong bóng không trôi ra ngoài */
+            overflow: hidden;
             position: relative;
         }
 
-        /* Nút thêm ghi chú */
-        #addBtn {
+        /* Các nút điều khiển góc dưới */
+        .controls {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background-color: #8c6b5d; /* Màu nâu vintage */
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .btn-circle {
+            background-color: #8c6b5d;
             color: #f4ebd0;
             border: 2px solid #5c4033;
             border-radius: 50%;
             width: 60px;
             height: 60px;
-            font-size: 30px;
+            font-size: 24px;
             cursor: pointer;
-            z-index: 100;
             box-shadow: 4px 4px 0px #5c4033;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+            font-weight: bold;
         }
-        #addBtn:hover {
+        .btn-circle:hover {
             transform: translate(-2px, -2px);
             box-shadow: 6px 6px 0px #5c4033;
         }
 
-        /* Khung nhập liệu (Modal) */
-        #modal {
+        /* Khung cửa sổ (Modal) */
+        .modal-overlay {
             display: none;
             position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 200;
+        }
+        .modal-content {
+            position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -51,21 +67,26 @@
             padding: 30px;
             border: 2px solid #5c4033;
             box-shadow: 8px 8px 0px #5c4033;
-            z-index: 200;
             text-align: center;
+            width: 300px;
+            max-width: 80%;
         }
-        #modal textarea {
-            width: 250px;
-            height: 100px;
+        .modal-content textarea, .modal-content .full-text-view {
+            width: 100%;
+            box-sizing: border-box;
+            height: 120px;
             background-color: #fffaf0;
             border: 1px solid #8c6b5d;
             font-family: inherit;
             padding: 10px;
             color: #4a3b32;
             resize: none;
+            margin-bottom: 15px;
+            text-align: left;
+            overflow-y: auto;
+            white-space: pre-wrap;
         }
-        #modal button {
-            margin-top: 15px;
+        .modal-content button {
             padding: 8px 15px;
             background-color: #8c6b5d;
             color: #f4ebd0;
@@ -73,111 +94,158 @@
             cursor: pointer;
             font-family: inherit;
             font-weight: bold;
+            margin: 0 5px;
         }
 
         /* Bong bóng ghi chú */
         .bubble {
             position: absolute;
-            background: rgba(222, 203, 175, 0.85); /* Màu ngà vàng bán trong suốt */
-            border: 1px solid #bba689;
+            background: rgba(222, 203, 175, 0.9);
+            border: 2px solid #bba689;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 20px;
+            padding: 15px;
             box-shadow: inset 0 0 20px rgba(139, 105, 82, 0.2), 3px 3px 10px rgba(0,0,0,0.1);
             font-size: 14px;
             font-weight: bold;
-            cursor: pointer;
+            cursor: grab;
             user-select: none;
-            /* Giới hạn kích thước bong bóng */
-            width: 120px;
-            height: 120px;
-            word-wrap: break-word;
-            overflow: hidden;
+            width: 130px;
+            height: 130px;
+            box-sizing: border-box;
             backdrop-filter: blur(2px);
+            transition: border-color 0.2s;
         }
         
-        /* Nút xóa ẩn khi trỏ chuột vào bong bóng */
-        .delete-btn {
+        /* Chữ bên trong bong bóng (Cắt ngắn nếu quá dài) */
+        .text-content {
+            display: -webkit-box;
+            -webkit-line-clamp: 4; /* Chỉ hiện tối đa 4 dòng */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            pointer-events: none; /* Không cản trở việc click vào bong bóng */
+        }
+
+        /* Trạng thái khi được bấm 1 lần (Đứng im & Hiện nút xóa) */
+        .bubble.selected {
+            border-color: #8b0000; /* Đổi màu viền để nhận biết */
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.3);
+            z-index: 50;
+        }
+        .bubble .delete-btn {
             display: none;
             position: absolute;
             top: 5px;
-            right: 10px;
-            color: #8b0000;
+            right: 15px;
+            background: #8b0000;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            line-height: 22px;
             font-size: 16px;
-            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #5c4033;
         }
-        .bubble:hover .delete-btn {
+        .bubble.selected .delete-btn {
             display: block;
         }
     </style>
 </head>
 <body>
 
-    <button id="addBtn" onclick="openModal()">+</button>
+    <div class="controls">
+        <button class="btn-circle" onclick="exportNotes()" title="Xuất file Text">🖨️</button>
+        <button class="btn-circle" onclick="openAddModal()" title="Thêm ghi chú">+</button>
+    </div>
 
-    <div id="modal">
-        <h3 style="margin-top:0;">Thêm Ký Ức Mới</h3>
-        <textarea id="noteInput" placeholder="Viết gì đó vào đây..."></textarea><br>
-        <button onclick="saveNote()">Lưu vào bong bóng</button>
-        <button onclick="closeModal()" style="background-color: #ccc; color: #333;">Hủy</button>
+    <div id="addModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Thêm Ký Ức Mới</h3>
+            <textarea id="noteInput" placeholder="Viết gì đó vào đây..."></textarea>
+            <button onclick="saveNote()">Lưu lại</button>
+            <button onclick="closeModals()" style="background-color: #ccc; color: #333;">Hủy</button>
+        </div>
+    </div>
+
+    <div id="viewModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Nội dung chi tiết</h3>
+            <div id="fullTextDisplay" class="full-text-view"></div>
+            <button onclick="closeModals()">Đóng lại</button>
+        </div>
     </div>
 
     <div id="bubbleContainer"></div>
 
     <script>
-        // Lấy dữ liệu từ Local Storage khi vừa mở web
         let notes = JSON.parse(localStorage.getItem('vintageBubbles')) || [];
-        let bubblesArray = []; // Mảng chứa các bong bóng đang bay
+        let bubblesArray = []; 
+        
+        // Biến phục vụ tính năng kéo thả
+        let dragObj = null;
+        let startX, startY, initialLeft, initialTop;
+        let isMoved = false; // Phân biệt giữa kéo thả và click chuột
 
-        // Mở / Đóng khung nhập
-        function openModal() {
-            document.getElementById('modal').style.display = 'block';
+        // --- QUẢN LÝ MODAL (CỬA SỔ) ---
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'block';
             document.getElementById('noteInput').value = '';
             document.getElementById('noteInput').focus();
         }
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
+        function openViewModal(text) {
+            document.getElementById('viewModal').style.display = 'block';
+            document.getElementById('fullTextDisplay').innerText = text;
+        }
+        function closeModals() {
+            document.getElementById('addModal').style.display = 'none';
+            document.getElementById('viewModal').style.display = 'none';
         }
 
-        // Lưu ghi chú
+        // --- QUẢN LÝ GHI CHÚ ---
         function saveNote() {
             const text = document.getElementById('noteInput').value.trim();
             if (text !== "") {
                 notes.push(text);
-                // Lưu vào bộ nhớ trình duyệt
                 localStorage.setItem('vintageBubbles', JSON.stringify(notes));
-                createBubbleDOM(text, notes.length - 1);
-                closeModal();
+                renderAllBubbles();
+                closeModals();
             }
         }
-
-        // Xóa ghi chú
-        function deleteNote(index, element) {
+        function deleteNote(event, index) {
+            event.stopPropagation(); // Tránh kích hoạt click của bong bóng
             notes.splice(index, 1);
             localStorage.setItem('vintageBubbles', JSON.stringify(notes));
-            element.remove();
-            // Xóa khỏi mảng chuyển động
-            bubblesArray = bubblesArray.filter(b => b.element !== element);
-            // Render lại toàn bộ để cập nhật đúng Index
             renderAllBubbles();
         }
+        function exportNotes() {
+            if (notes.length === 0) return alert("Chưa có ghi chú nào để xuất!");
+            let content = "DANH SÁCH GHI CHÚ\n==================\n\n";
+            notes.forEach((n, i) => content += `[${i + 1}] ${n}\n\n`);
+            
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "GhiChu_Vintage.txt";
+            link.click();
+        }
 
-        // Tạo phần tử HTML cho bong bóng
+        // --- XÂY DỰNG BONG BÓNG VÀ TƯƠNG TÁC ---
         function createBubbleDOM(text, index) {
             const container = document.getElementById('bubbleContainer');
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
             
-            // Chèn chữ và nút xóa
             bubble.innerHTML = `
-                <span class="delete-btn" onclick="deleteNote(${index}, this.parentElement)">×</span>
-                <span>${text}</span>
+                <div class="delete-btn" onclick="deleteNote(event, ${index})" title="Xóa">×</div>
+                <div class="text-content">${text}</div>
             `;
 
-            // Đặt vị trí xuất hiện ngẫu nhiên
+            // Tọa độ ngẫu nhiên
             let x = Math.random() * (window.innerWidth - 150);
             let y = Math.random() * (window.innerHeight - 150);
             bubble.style.left = x + 'px';
@@ -185,14 +253,30 @@
 
             container.appendChild(bubble);
 
-            // Gán vận tốc di chuyển ngẫu nhiên (chậm rãi, lơ lửng)
-            let vx = (Math.random() - 0.5) * 1.5;
-            let vy = (Math.random() - 0.5) * 1.5;
+            // Vận tốc ngẫu nhiên
+            let vx = (Math.random() - 0.5) * 1.0; 
+            let vy = (Math.random() - 0.5) * 1.0;
 
-            bubblesArray.push({ element: bubble, x, y, vx, vy, width: 160, height: 160 });
+            let bubbleData = { element: bubble, x, y, vx, vy, width: 130, height: 130, isSelected: false, text: text };
+            bubblesArray.push(bubbleData);
+
+            // CÁC SỰ KIỆN CHUỘT (KÉO THẢ & CLICK)
+            bubble.onmousedown = function(e) {
+                if (e.target.className === 'delete-btn') return; // Bỏ qua nếu bấm nút xóa
+                dragObj = bubbleData;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialLeft = dragObj.x;
+                initialTop = dragObj.y;
+                isMoved = false;
+                bubble.style.cursor = 'grabbing';
+            };
+
+            bubble.ondblclick = function(e) {
+                openViewModal(bubbleData.text); // Ấn 2 lần mở xem chi tiết
+            };
         }
 
-        // Hiển thị tất cả bong bóng đã lưu
         function renderAllBubbles() {
             document.getElementById('bubbleContainer').innerHTML = '';
             bubblesArray = [];
@@ -201,23 +285,60 @@
             });
         }
 
-        // Hàm xử lý chuyển động (bay lơ lửng và đập vào tường nảy lại)
+        // --- XỬ LÝ SỰ KIỆN KÉO THẢ TOÀN MÀN HÌNH ---
+        document.addEventListener('mousemove', (e) => {
+            if (!dragObj) return;
+            let dx = e.clientX - startX;
+            let dy = e.clientY - startY;
+            
+            // Nếu chuột di chuyển quá 5px thì mới tính là "kéo thả", tránh nhầm với "click"
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                isMoved = true; 
+            }
+
+            dragObj.x = initialLeft + dx;
+            dragObj.y = initialTop + dy;
+            dragObj.element.style.left = dragObj.x + 'px';
+            dragObj.element.style.top = dragObj.y + 'px';
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (dragObj) {
+                dragObj.element.style.cursor = 'grab';
+                
+                // Nếu chỉ là click (không di chuyển chuột), tiến hành "Chọn/Bỏ chọn"
+                if (!isMoved) {
+                    dragObj.isSelected = !dragObj.isSelected;
+                    if (dragObj.isSelected) {
+                        dragObj.element.classList.add('selected');
+                    } else {
+                        dragObj.element.classList.remove('selected');
+                    }
+                }
+                dragObj = null;
+            }
+        });
+
+        // --- VÒNG LẶP CHUYỂN ĐỘNG ---
         function animateBubbles() {
             bubblesArray.forEach(b => {
+                // Đứng im nếu đang được kéo thả hoặc đang được chọn (click 1 lần)
+                if (b === dragObj || b.isSelected) return;
+
                 b.x += b.vx;
                 b.y += b.vy;
 
-                // Nếu chạm viền màn hình thì đảo chiều vận tốc
+                // Nảy lại khi chạm viền màn hình
                 if (b.x <= 0 || b.x + b.width >= window.innerWidth) b.vx *= -1;
                 if (b.y <= 0 || b.y + b.height >= window.innerHeight) b.vy *= -1;
 
                 b.element.style.left = b.x + 'px';
                 b.element.style.top = b.y + 'px';
             });
-            requestAnimationFrame(animateBubbles); // Vòng lặp liên tục tạo animation mượt mà
+            requestAnimationFrame(animateBubbles);
         }
 
-        // Khởi chạy khi tải trang
+        // Khởi động
         renderAllBubbles();
         animateBubbles();
     </script>
